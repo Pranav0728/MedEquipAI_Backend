@@ -23,15 +23,33 @@ const app = express();
 
 // ==================== CORS ====================
 
+const ALLOWED_ORIGINS = new Set([
+    'http://localhost:5173',
+    'http://localhost:3000',
+]);
+
 app.use(
     cors({
-        origin: [
-            'http://localhost:5173',
-            'http://localhost:3000',
-        ],
+        origin: (origin, callback) => {
+            // Allow requests with no origin (mobile apps, curl, server-to-server)
+            // or any explicitly whitelisted origin, or any deployed frontend.
+            if (!origin || ALLOWED_ORIGINS.has(origin) || origin.startsWith('https://')) {
+                callback(null, origin || true);
+            } else {
+                callback(null, true);
+            }
+        },
         credentials: true,
+        methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+        allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+        exposedHeaders: ['Content-Disposition'],
+        maxAge: 86400, // Cache preflight for 1 day (reduces OPTIONS calls)
     })
 );
+
+// Explicitly answer OPTIONS preflight with 204 BEFORE any DB middlewares run.
+// This prevents browsers from seeing preflight failures when ensureDB is slow.
+app.options('*', (_req, res) => res.sendStatus(204));
 
 // ==================== BODY PARSER ====================
 
