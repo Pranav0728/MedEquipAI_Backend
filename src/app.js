@@ -28,7 +28,7 @@ const app = express();
 const allowedOrigins = [
     'http://localhost:5173',
     'http://localhost:3000',
-    'https://med-equip-ai-frontend.vercel.app/',
+    'https://medequipai.vercel.app',
 ];
 
 app.use(
