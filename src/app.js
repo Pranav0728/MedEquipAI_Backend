@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 
 import { notFound, errorHandler } from './middleware/errorMiddleware.js';
+import { ensureDB, connectDB } from './config/db.js';
 
 import authRoutes from './routes/authRoutes.js';
 import equipmentRoutes from './routes/equipmentRoutes.js';
@@ -12,6 +13,11 @@ import dashboardRoutes from './routes/dashboardRoutes.js';
 import aiRoutes from './routes/aiRoutes.js';
 
 dotenv.config();
+
+// Eagerly start DB connection (no await — background) for long-running servers.
+// On serverless, this may not finish before a request, which is why ensureDB
+// middleware below waits for it explicitly on each request.
+connectDB().catch((err) => console.warn('Initial DB connect failed (will retry on request):', err.message));
 
 const app = express();
 
@@ -31,6 +37,11 @@ app.use(
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
+
+// ==================== DB READINESS (critical for serverless) ====================
+// Every request MUST have MongoDB connected before running. Otherwise, mongoose
+// query buffering kicks in and times out after 10s on cold starts / slow connects.
+app.use('/api', ensureDB);
 
 // ==================== HEALTH CHECK ====================
 
